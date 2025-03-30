@@ -116,10 +116,9 @@ def send_list_diameters(message):
         cursor = conn.cursor()
 
         # Выполняем SQL-запрос
-        cursor.execute("SELECT DISTINCT diameter FROM milling_cutters_steel")
+        cursor.execute("SELECT DISTINCT diameter FROM milling_cutters_steel WHERE count>0")
         data = cursor.fetchall()
         diameters = [float(row[0]) for row in data]
-        print(data)
         # Закрываем соединение
         cursor.close()
         conn.close()
@@ -159,7 +158,7 @@ def handle_element_selection(call):
         with sqlite3.connect(db_name) as conn:
             cursor = conn.cursor()
             cursor.execute(
-                "SELECT * FROM milling_cutters_steel WHERE name=?",
+                "SELECT * FROM milling_cutters_steel WHERE name=? AND count>0",
                 (element_name,)
             )
             element = cursor.fetchone()
@@ -176,7 +175,6 @@ def handle_element_selection(call):
         else:
             response = "Элемент не найден"
 
-        # Редактируем исходное сообщение с кнопками
         bot.edit_message_text(
             chat_id=call.message.chat.id,
             message_id=call.message.message_id,
@@ -193,13 +191,14 @@ def handle_diameter_selection(call):
         with sqlite3.connect(db_name) as conn:
             cursor = conn.cursor()
             cursor.execute(
-                "SELECT * FROM milling_cutters_steel WHERE diameter=?",
+                "SELECT * FROM milling_cutters_steel WHERE diameter=? AND count>0",
                 (float(diameter_name),)
             )
             data = cursor.fetchall()
-            print(data)
-            # conn.close()
             # cursor.close()
+            # conn.close()
+            print(data)
+
 
         markup = types.InlineKeyboardMarkup()
         for item in data:
@@ -217,6 +216,7 @@ def handle_diameter_selection(call):
             reply_markup=markup
         )
 
+
     except Exception as e:
         bot.send_message(call.message.chat.id, f"Ошибка: {str(e)}")
 
@@ -232,6 +232,8 @@ def handle_mill_selection(call):
                 (element_name,)
             )
             element = cursor.fetchone()
+            # cursor.close()
+            # conn.close()
 
         if element:
             # Форматируем информацию о элементе
@@ -245,13 +247,69 @@ def handle_mill_selection(call):
         else:
             response = "Элемент не найден"
 
+        markup = types.InlineKeyboardMarkup()
+        markup.add(
+            types.InlineKeyboardButton(
+                text=str("Да, беру!"),  # Отображаемое имя
+                callback_data=f"takeMill_{element_name}"
+            ),
+            types.InlineKeyboardButton(
+                text=str("Нет, оставлю!"),  # Отображаемое имя
+                callback_data=f"leaveMill"
+            )
+        )
+
         # Редактируем исходное сообщение с кнопками
         bot.edit_message_text(
             chat_id=call.message.chat.id,
             message_id=call.message.message_id,
-            text=response
+            text=response,
+            reply_markup=markup
         )
-        print("some test")
+
+    except Exception as e:
+        bot.send_message(call.message.chat.id, f"Ошибка: {str(e)}")
+
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith('takeMill_'))
+def handle_take_mill(call):
+    try:
+        mill_name = call.data.split('_')[1]  # Извлекаем ID из callback_data
+
+        with sqlite3.connect(db_name) as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT * FROM milling_cutters_steel WHERE name=?",
+                (mill_name,)
+            )
+            element = cursor.fetchone()
+            new_count = element[4] - 1
+            # cursor.close()
+            # conn.close()
+
+        if element:
+            cursor.execute(
+                "UPDATE milling_cutters_steel SET count = ? WHERE name = ?",
+                (new_count, element[0])
+            )
+            conn.commit()
+            response = (f"Вы взяли фрезу {element[0]}\n"
+                        f"их осталось {new_count} штук\n"
+                        f"В начало /start")
+
+            bot.edit_message_text(
+                chat_id=call.message.chat.id,
+                message_id=call.message.message_id,
+                text=response
+            )
+        else:
+            response = "Элемент не найден"
+            # Редактируем исходное сообщение с кнопками
+            bot.edit_message_text(
+                chat_id=call.message.chat.id,
+                message_id=call.message.message_id,
+                text=response
+            )
     except Exception as e:
         bot.send_message(call.message.chat.id, f"Ошибка: {str(e)}")
 
@@ -286,6 +344,9 @@ def callback_worker(call):
         print('unswer put_mill')
     elif call.data == "put_drill":
         print('unswer put_drill')
+    elif call.data == "takeMill_":
+        mill_name = call.data.split('_')[1]
+        print(f"take mill {mill_name}")
 
 
 
