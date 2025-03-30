@@ -251,6 +251,7 @@ def handle_mill_selection(call):
             message_id=call.message.message_id,
             text=response
         )
+        print("some test")
     except Exception as e:
         bot.send_message(call.message.chat.id, f"Ошибка: {str(e)}")
 
