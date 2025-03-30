@@ -297,14 +297,15 @@ def handle_take_mill(call):
             conn.commit()
             cursor.close()
             conn.close()
-            response = (f"Вы взяли фрезу {element[0]}\n"
-                        f"их осталось {new_count} штук\n"
+            response = (f"Вы взяли фрезу _*__{element[0]}__*_\n"
+                        f"было ~* {new_count + 1} *~  "
+                        f"осталось *{new_count}*\n"
                         f"В начало /start")
-
             bot.edit_message_text(
                 chat_id=call.message.chat.id,
                 message_id=call.message.message_id,
-                text=response
+                text=response,
+                parse_mode='MarkdownV2'
             )
         else:
             response = "Элемент не найден"
