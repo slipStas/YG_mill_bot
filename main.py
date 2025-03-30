@@ -234,7 +234,7 @@ def handle_mill_selection(call):
             element = cursor.fetchone()
 
         if element:
-            # Форматируем информацию о элементе
+            # Форматируем информацию о элементеsad
             response = (
                 f"название: {element[0]}\n"
                 f"диаметр: {element[1]}\n"
@@ -251,6 +251,7 @@ def handle_mill_selection(call):
             message_id=call.message.message_id,
             text=response
         )
+        print("hello")
     except Exception as e:
         bot.send_message(call.message.chat.id, f"Ошибка: {str(e)}")
 
