@@ -135,6 +135,12 @@ def send_list_diameters(message):
                     callback_data=f"listUniqueDiameters_{item}"
                 )
             )
+        markup.add(
+            types.InlineKeyboardButton(
+                text="В начало",  # Отображаемое имя
+                callback_data=f"start"
+            )
+        )
 
         bot.edit_message_text(
             chat_id=message.chat.id,
@@ -209,6 +215,12 @@ def handle_diameter_selection(call):
                     callback_data=f"listDiameterMills_{item[0]}"
                 )
             )
+        markup.add(
+            types.InlineKeyboardButton(
+                text="В начало",  # Отображаемое имя
+                callback_data=f"start"
+            )
+        )
 
         bot.edit_message_text(
             chat_id=call.message.chat.id,
@@ -339,21 +351,16 @@ def callback_worker(call):
         print('unswer NO')
     elif call.data == "get_mill":
         print('unswer get_mill')
-        # con = sqlite3.connect(db_name)
-        # cursor = con.cursor()
         send_list_diameters(call.message)
-
-        # cursor.close()
-        # con.close()
     elif call.data == "get_drill":
         print('unswer get_drill')
     elif call.data == "put_mill":
         print('unswer put_mill')
     elif call.data == "put_drill":
         print('unswer put_drill')
-    # elif call.data == "list_diameters":
-    #     print("put Нет, оставлю")
-    #     send_list_diameters(call.message)
+    elif call.data == "start":
+        print("start")
+        bot.delete_message(call.message.chat.id, call.message.message_id)
 
 
 
