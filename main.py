@@ -3,6 +3,8 @@ import sqlite3
 import telebot
 
 from telebot import types
+from telegram import Bot
+from telegram.helpers import escape_markdown
 from employee import Employee
 from employee_group import EmployeeGroup
 
@@ -30,7 +32,6 @@ def get_text_messages(message):
             match cursor.execute(
                 "SELECT * FROM employee WHERE telegram_id=" + str(message.from_user.id)).fetchone()[5]:
                 case EmployeeGroup.employee.value:
-                    # user_group = EmployeeGroup.employee
                     keyboard = types.InlineKeyboardMarkup()
                     key_mill = types.InlineKeyboardButton(text='взять фрезу', callback_data='get_mill')  # кнопка «Да»
                     keyboard.add(key_mill)  # добавляем кнопку в клавиатуру
@@ -39,7 +40,6 @@ def get_text_messages(message):
 
                     bot.send_message(message.from_user.id, text="Какой инструмент хочешь взять?", reply_markup=keyboard)
                 case EmployeeGroup.master.value:
-                    # user_group = EmployeeGroup.master
                     keyboard = types.InlineKeyboardMarkup()
                     key_get_mill = types.InlineKeyboardButton(text='взять фрезу', callback_data='get_mill')  # кнопка «Да»
                     keyboard.add(key_get_mill)  # добавляем кнопку в клавиатуру
@@ -137,7 +137,7 @@ def send_list_diameters(message):
             )
         markup.add(
             types.InlineKeyboardButton(
-                text="В начало",  # Отображаемое имя
+                text="Отмена!",  # Отображаемое имя
                 callback_data=f"start"
             )
         )
@@ -217,8 +217,8 @@ def handle_diameter_selection(call):
             )
         markup.add(
             types.InlineKeyboardButton(
-                text="В начало",  # Отображаемое имя
-                callback_data=f"start"
+                text=str("Назад"),  # Отображаемое имя
+                callback_data=f"tolist_diameters"
             )
         )
 
@@ -309,7 +309,8 @@ def handle_take_mill(call):
             conn.commit()
             cursor.close()
             conn.close()
-            response = (f"Вы взяли фрезу _*__{element[0]}__*_\n"
+            escaped_text = escape_markdown(element[0], version=2)
+            response = (f"Вы взяли фрезу _*__{escaped_text}__*_\n"
                         f"было ~* {new_count + 1} *~  "
                         f"осталось *{new_count}*\n"
                         f"В начало /start")
@@ -361,7 +362,8 @@ def callback_worker(call):
     elif call.data == "start":
         print("start")
         bot.delete_message(call.message.chat.id, call.message.message_id)
-
+    elif call.data == "tolist_diameters":
+        send_list_diameters(call.message)
 
 
 
