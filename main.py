@@ -6,7 +6,7 @@ from telebot import types
 from employee import Employee
 from employee_group import EmployeeGroup
 
-db_name = 'available_tools.db'
+db_name = 'cutting_tools/available_tools.db'
 new_employeer = Employee(name='', second_name='', phone_number='', telegram_id=0)
 token = open('token.txt', 'r').read()
 
@@ -67,46 +67,46 @@ def get_text_messages(message):
         bot.send_message(message.from_user.id, "Здравствуйте, нажмите /start для начала работы")
 
 
-@bot.message_handler(commands=['list_all_tool'])
-def send_list_all_tool(message):
-    try:
-        # Подключаемся к базе данных
-        conn = sqlite3.connect(db_name)
-        cursor = conn.cursor()
-
-        # Выполняем SQL-запрос
-        cursor.execute("SELECT * FROM milling_cutters_steel")
-        data = cursor.fetchall()
-
-        # Закрываем соединение
-        cursor.close()
-        conn.close()
-
-        if not data:
-            bot.send_message(message.chat.id, "Список пуст")
-            return
-
-        # Создаем inline-клавиатуру
-        markup = types.InlineKeyboardMarkup()
-        for item in data:
-            markup.add(
-                types.InlineKeyboardButton(
-                    text=item[0],  # Отображаемое имя
-                    callback_data=f"selectAllTools_{item[0]}"
-                )
-            )
-
-        bot.edit_message_text(
-            chat_id=message.chat.id,
-            message_id=message.message_id,
-            text="Выберите элемент:",
-            reply_markup=markup
-        )
-
-    except sqlite3.Error as e:
-        bot.send_message(message.chat.id, f"Ошибка базы данных: {e}")
-    except Exception as e:
-        bot.send_message(message.chat.id, f"Произошла ошибка: {e}")
+# @bot.message_handler(commands=['list_all_tool'])
+# def send_list_all_tool(message):
+#     try:
+#         # Подключаемся к базе данных
+#         conn = sqlite3.connect(db_name)
+#         cursor = conn.cursor()
+#
+#         # Выполняем SQL-запрос
+#         cursor.execute("SELECT * FROM milling_cutters_steel")
+#         data = cursor.fetchall()
+#
+#         # Закрываем соединение
+#         cursor.close()
+#         conn.close()
+#
+#         if not data:
+#             bot.send_message(message.chat.id, "Список пуст")
+#             return
+#
+#         # Создаем inline-клавиатуру
+#         markup = types.InlineKeyboardMarkup()
+#         for item in data:
+#             markup.add(
+#                 types.InlineKeyboardButton(
+#                     text=item[0],  # Отображаемое имя
+#                     callback_data=f"selectAllTools_{item[0]}"
+#                 )
+#             )
+#
+#         bot.edit_message_text(
+#             chat_id=message.chat.id,
+#             message_id=message.message_id,
+#             text="Выберите элемент:",
+#             reply_markup=markup
+#         )
+#
+#     except sqlite3.Error as e:
+#         bot.send_message(message.chat.id, f"Ошибка базы данных: {e}")
+#     except Exception as e:
+#         bot.send_message(message.chat.id, f"Произошла ошибка: {e}")
 
 @bot.message_handler(commands=['list_diameters'])
 def send_list_diameters(message):
@@ -162,7 +162,8 @@ def handle_element_selection(call):
                 (element_name,)
             )
             element = cursor.fetchone()
-
+        cursor.close()
+        conn.close()
         if element:
             # Форматируем информацию о элементе
             response = (
@@ -183,6 +184,7 @@ def handle_element_selection(call):
     except Exception as e:
         bot.send_message(call.message.chat.id, f"Ошибка: {str(e)}")
 
+
 @bot.callback_query_handler(func=lambda call: call.data.startswith('listUniqueDiameters_'))
 def handle_diameter_selection(call):
     try:
@@ -195,10 +197,9 @@ def handle_diameter_selection(call):
                 (float(diameter_name),)
             )
             data = cursor.fetchall()
-            # cursor.close()
-            # conn.close()
             print(data)
-
+        cursor.close()
+        conn.close()
 
         markup = types.InlineKeyboardMarkup()
         for item in data:
@@ -224,7 +225,6 @@ def handle_diameter_selection(call):
 def handle_mill_selection(call):
     try:
         element_name = call.data.split('_')[1]  # Извлекаем ID из callback_data
-
         with sqlite3.connect(db_name) as conn:
             cursor = conn.cursor()
             cursor.execute(
@@ -232,8 +232,8 @@ def handle_mill_selection(call):
                 (element_name,)
             )
             element = cursor.fetchone()
-            # cursor.close()
-            # conn.close()
+        cursor.close()
+        conn.close()
 
         if element:
             # Форматируем информацию о элементе
@@ -255,7 +255,7 @@ def handle_mill_selection(call):
             ),
             types.InlineKeyboardButton(
                 text=str("Нет, оставлю!"),  # Отображаемое имя
-                callback_data=f"leaveMill"
+                callback_data=f"get_mill"
             )
         )
 
@@ -284,15 +284,19 @@ def handle_take_mill(call):
             )
             element = cursor.fetchone()
             new_count = element[4] - 1
-            # cursor.close()
-            # conn.close()
+        cursor.close()
+        conn.close()
 
         if element:
+            conn = sqlite3.connect(db_name)
+            cursor = conn.cursor()
             cursor.execute(
                 "UPDATE milling_cutters_steel SET count = ? WHERE name = ?",
                 (new_count, element[0])
             )
             conn.commit()
+            cursor.close()
+            conn.close()
             response = (f"Вы взяли фрезу {element[0]}\n"
                         f"их осталось {new_count} штук\n"
                         f"В начало /start")
@@ -326,27 +330,29 @@ def callback_worker(call):
                        new_employeer.get_info())
 
         con.commit()
+        cursor.close()
+        con.close()
         print('data has been added into the db')
         bot.send_message(call.message.chat.id, 'чтобы взять инструмент нажмите /start')
     elif call.data == "no":
         print('unswer NO')
     elif call.data == "get_mill":
         print('unswer get_mill')
-        con = sqlite3.connect(db_name)
-        cursor = con.cursor()
+        # con = sqlite3.connect(db_name)
+        # cursor = con.cursor()
         send_list_diameters(call.message)
 
-        cursor.close()
-        con.close()
+        # cursor.close()
+        # con.close()
     elif call.data == "get_drill":
         print('unswer get_drill')
     elif call.data == "put_mill":
         print('unswer put_mill')
     elif call.data == "put_drill":
         print('unswer put_drill')
-    elif call.data == "takeMill_":
-        mill_name = call.data.split('_')[1]
-        print(f"take mill {mill_name}")
+    # elif call.data == "list_diameters":
+    #     print("put Нет, оставлю")
+    #     send_list_diameters(call.message)
 
 
 

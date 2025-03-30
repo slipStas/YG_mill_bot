@@ -1,4 +1,5 @@
 # created by virtualenv automatically
 token.txt
 passs.txt
+cutting_tools/available_tools.db
 .venv/Lib
